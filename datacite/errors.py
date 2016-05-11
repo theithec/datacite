@@ -15,8 +15,8 @@ Connection issues raises :py:exc:`datacite.errors.HttpError` while DataCite
 MDS error responses raises a subclass of
 :py:exc:`datacite.errors.DataCiteError`.
 """
-
 from __future__ import absolute_import, print_function
+import logging
 
 
 class HttpError(Exception):
@@ -37,24 +37,31 @@ class DataCiteError(Exception):
     """
 
     @staticmethod
-    def factory(err_code):
+    def factory(request):
         """Factory for creating exceptions based on the HTTP error code."""
-        if err_code == 204:
-            return DataCiteNoContentError()
-        elif err_code == 400:
-            return DataCiteBadRequestError()
-        elif err_code == 401:
-            return DataCiteUnauthorizedError()
-        elif err_code == 403:
-            return DataCiteForbiddenError()
-        elif err_code == 404:
-            return DataCiteNotFoundError()
-        elif err_code == 410:
-            return DataCiteGoneError()
-        elif err_code == 412:
-            return DataCitePreconditionError()
-        else:
-            return DataCiteServerError()
+        error_code = request.code
+        error_mapping = {
+            '204': DataCiteNoContentError,
+            '400': DataCiteBadRequestError,
+            '401': DataCiteUnauthorizedError,
+            '403': DataCiteForbiddenError,
+            '404': DataCiteNotFoundError,
+            '410': DataCiteGoneError,
+            '412': DataCitePreconditionError,
+        }
+        Err = error_mapping.get(error_code, DataCiteServerError)
+        return Err(request)
+
+
+    def __init__(self, request):
+        """Sets a (bit more) usefull errormessage and removes the password
+        from debug data."""
+        super(DataCiteError, self).__init__(
+            "{request.code}: {request.data}".format(request=request))
+        self.error_code = request.code
+        info = request.__dict__.copy()
+        info.pop("password")
+        logging.debug(str(info))
 
 
 class DataCiteServerError(DataCiteError):
