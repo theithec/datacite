@@ -52,7 +52,7 @@ def tostring(data, **kwargs):
 
 def validate(data):
     """Validate DataCite v3.1 JSON dictionary."""
-    return validator.is_valid(data)
+    return validator.validate(data)
 
 
 @rules.rule('identifier')
